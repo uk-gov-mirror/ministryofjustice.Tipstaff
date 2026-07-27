@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using Tipstaff.Models;
+using Tipstaff.Helpers;
 using System.Data;
 using System.IO;
 using System.Xml;
@@ -30,9 +31,7 @@ namespace Tipstaff.Areas.Admin.Controllers
         public ActionResult Open(int id)
         {
             Template template = db.Templates.Find(id);
-            XmlDocument xDoc = new XmlDocument();
-            xDoc.InnerXml = template.templateXML;
-            return File(genericFunctions.ConvertToBytes(xDoc), "application/msword", template.templateName +".xml"); 
+            return File(template.templateDOTX, "application/vnd.openxmlformats-officedocument.wordprocessingml.template", template.templateName + ".dotx"); 
         }
         public ActionResult Create()
         {
@@ -43,29 +42,30 @@ namespace Tipstaff.Areas.Admin.Controllers
         [HttpPost]
         public ActionResult Create(TemplateEdit model)
         {
-            var xml = string.Empty;
             try
             {
                 //Tests before uploading
                 if (model.uploadFile != null)
                 {
-                    if (!Path.GetExtension(model.uploadFile.FileName.ToLower()).EndsWith("xml")) { throw new NotUploaded("Please select an XML file to upload"); }
+                    if (!Path.GetExtension(model.uploadFile.FileName.ToLower()).EndsWith("dotx")) { throw new NotUploaded("Please select a .dotx file to upload"); }
                     if (model.uploadFile.ContentLength == 0) { throw new NotUploaded("The selected file appears to be empty, please select a different file and re-try"); }
-                    Directory.CreateDirectory(@"C:\\TipstaffUploads");
 
                     //Upload
-                    var fileName = Path.Combine("C:\\TipstaffUploads", Path.GetFileName(model.uploadFile.FileName));
-                    model.uploadFile.SaveAs(fileName); //Save to uploads folder     
-                    XmlDocument document = new XmlDocument();
-                    document.Load(fileName);
-                    xml = document.InnerXml;
-                    //Delete file
-                    System.IO.File.Delete(fileName);
-                    model.Template.templateXML = xml;
+                    byte[] fileBytes;
+                    using (var ms = new MemoryStream())
+                    {
+                        model.uploadFile.InputStream.CopyTo(ms);
+                        fileBytes = ms.ToArray();
+                    }
+
+                    if (!SensitivityLabelValidator.HasSensitivityLabel(fileBytes))
+                        throw new NotUploaded("The template must have a Microsoft sensitivity label applied before uploading. Please open the file in Word, apply the appropriate label, and re-upload.");
+
+                    model.Template.templateDOTX = fileBytes;
                     model.Template.active = true;
                     db.Entry(model.Template).State = EntityState.Added;
                     db.SaveChanges();
-                    return RedirectToAction("Index");
+                    return RedirectToAction("Index");                    
                 }
                 else
                 {
@@ -94,30 +94,31 @@ namespace Tipstaff.Areas.Admin.Controllers
         {
             Template oldTemplate = db.Templates.Find(model.Template.templateID);
 
-            var xml = string.Empty;
             try
             {
                 //Tests before uploading
                 if (model.uploadFile != null)
                 {
-                    if (!Path.GetExtension(model.uploadFile.FileName.ToLower()).EndsWith("xml")) { throw new NotUploaded("Please select an XML file to upload"); }
+                    if (!Path.GetExtension(model.uploadFile.FileName.ToLower()).EndsWith("dotx")) { throw new NotUploaded("Please select a .dotx file to upload"); }
                     if (model.uploadFile.ContentLength == 0) { throw new NotUploaded("The selected file appears to be empty, please select a different file and re-try"); }
-                    Directory.CreateDirectory(@"C:\\TipstaffUploads");
 
                     //Upload
-                    var fileName = Path.Combine("C:\\TipstaffUploads", Path.GetFileName(model.uploadFile.FileName));
-                    model.uploadFile.SaveAs(fileName); //Save to uploads folder     
-                    XmlDocument document = new XmlDocument();
-                    document.Load(fileName);
-                    xml = document.InnerXml;
-                    //Delete file
-                    System.IO.File.Delete(fileName);
+                    byte[] fileBytes;
+                    using (var ms = new MemoryStream())
+                    {
+                        model.uploadFile.InputStream.CopyTo(ms);
+                        fileBytes = ms.ToArray();
+                    }
+
+                    if (!SensitivityLabelValidator.HasSensitivityLabel(fileBytes))
+                        throw new NotUploaded("The template must have a Microsoft sensitivity label applied before uploading. Please open the file in Word, apply the appropriate label, and re-upload.");
+
+                    model.Template.templateDOTX = fileBytes;
                 }
                 else
                 {
-                    xml = db.Templates.Find(model.Template.templateID).templateXML;
+                    model.Template.templateDOTX = db.Templates.Find(model.Template.templateID).templateDOTX;
                 }
-                model.Template.templateXML = xml;
                 db.Entry(oldTemplate).CurrentValues.SetValues(model.Template);
                 db.SaveChanges();
 

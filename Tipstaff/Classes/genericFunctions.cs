@@ -52,12 +52,7 @@ namespace Tipstaff
                 return false;
             }
         }
-        public static byte[] ConvertToBytes(XmlDocument doc)
-        {
-            Encoding encoding = Encoding.UTF8;
-            byte[] docAsBytes = encoding.GetBytes(doc.OuterXml);
-            return docAsBytes;
-        }
+
         public static string GetLowestError(Exception ex)
         {
             while (ex.Message.Contains("inner ex"))

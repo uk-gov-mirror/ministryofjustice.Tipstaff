@@ -262,10 +262,10 @@ namespace Tipstaff.Models
                                     string newValue = (current.GetValue(current.GetOrdinal(propertyName)) != null) ? current.GetValue(current.GetOrdinal(propertyName)).ToString() : "Empty";
                                     if (newValue == "") newValue = "Empty";
 
-                                    if (objType == "Template" && propertyName == "templateXML")
+                                    if (objType == "Template" && propertyName == "templateDOTX")
                                     {
-                                        oldValue = "XML";
-                                        newValue = "XML - Too long to record new version";
+                                        oldValue = "DOTX";
+                                        newValue = "DOTX - Too long to record new version";
                                     }
 
                                     if (oldValue != newValue) // probably not necessary

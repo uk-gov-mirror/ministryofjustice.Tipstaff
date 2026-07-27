@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using PagedList;
 using System.Security;
 using System.Collections.Generic;
@@ -73,26 +74,12 @@ namespace Tipstaff.Models
             }
         }
 
-        public virtual string xmlBlock
-        {
-            get
-            {
-                const string xmlString = "<w:tbl><w:tblPr><w:tblStyle w:val='TableGrid'/><w:tblW w:w='0' w:type='auto'/><w:tblLook w:val='01E0'/></w:tblPr><w:tblGrid><w:gridCol w:w='8856'/></w:tblGrid><w:tr wsp:rsidR='00DA2AE7' wsp:rsidTr='00DA2AE7'><w:tc><w:tcPr><w:tcW w:w='8856' w:type='dxa'/></w:tcPr><w:p wsp:rsidR='00DA2AE7' wsp:rsidRDefault='00DA2AE7'><w:pPr><w:rPr><w:lang w:val='EN-GB'/></w:rPr></w:pPr><w:r><w:rPr><w:lang w:val='EN-GB'/></w:rPr><w:t>{0}</w:t></w:r></w:p></w:tc></w:tr></w:tbl>";
-                string xmlOutput = string.Format(xmlString, printAddressMultiLine);
-                return xmlOutput;
-            }
-        }
 
         public virtual string printAddressMultiLine
         {
             get
             {
-                List<string> popLines = new List<string>();
-                foreach (var line in populatedLines)
-                {
-                    popLines.Add(SecurityElement.Escape(line));
-                }
-                return string.Join("<w:br/>", popLines.ToArray());
+                return string.Join("\n", populatedLines.Where(l => l != null));
             }
         }
         public virtual string screenAddressMultiLine
@@ -116,12 +103,7 @@ namespace Tipstaff.Models
         {
             get
             {
-                List<string> popLines = new List<string>();
-                foreach (var line in populatedLines)
-                {
-                    popLines.Add(SecurityElement.Escape(line));
-                }
-                return string.Join(", ", popLines.ToArray());
+                return string.Join(", ", populatedLines.Where(l => l != null));
             }
         }
     }

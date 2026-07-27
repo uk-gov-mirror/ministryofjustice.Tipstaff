@@ -203,7 +203,8 @@ namespace Tipstaff
             RegisterGlobalFilters(GlobalFilters.Filters);
             RegisterRoutes(RouteTable.Routes);
 
-            Database.SetInitializer(new MigrateDatabaseToLatestVersion<TipstaffDB, Migrations.Configuration>()); 
+            // Disable the database initializer (no automatic migrations) for the base DbContext
+            Database.SetInitializer<DbContext>(null);
             ServiceLayer.UnitOfWorkHelper.CurrentDataStore = new HttpContextDataStore();
 
             string appYear = ConfigurationManager.AppSettings["AppYear"];
@@ -236,12 +237,8 @@ namespace Tipstaff
         {
             var identity = HttpContext.Current.User?.Identity;
 
-            _cloudWatchLogger.LogInfo("Application_PostAuthenticateRequest <" + identity + ">");
-
             if (identity != null && identity.IsAuthenticated)
             {
-                _cloudWatchLogger.LogInfo("Application_PostAuthenticateRequest: Authenticated>");
-
                 var principal = new Tipstaff.CPrincipal(identity);
 
                 HttpContext.Current.User = principal;

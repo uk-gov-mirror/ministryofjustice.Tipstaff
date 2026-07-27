@@ -52,8 +52,8 @@ namespace Tipstaff.Models
         public string templateName { get; set; }
         //[Required]
         //public string templateMHT { get; set; }
-        [Required]
         public string templateXML { get; set; }
+        public byte[] templateDOTX { get; set; }
         [Display(Name="Is addressee required?")]
         public bool addresseerequired { get; set; }
         public bool active { get; set; }
@@ -75,7 +75,7 @@ namespace Tipstaff.Models
         {
             tipstaffRecordID = warrant.tipstaffRecordID;
             Path = string.Format(serverPath + "{0}", warrant.tipstaffRecordID);
-            fileName = string.Format("SCD26Location-{0}.doc", warrant.UniqueRecordID);
+            fileName = string.Format("SCD26Location-{0}.docx", warrant.UniqueRecordID);
             fullName = string.Format("{0}\\{1}", Path, fileName);
             //Ensure folder exists to create outoput
             //if (!Directory.Exists(Path)) Directory.CreateDirectory(Path);
@@ -84,7 +84,7 @@ namespace Tipstaff.Models
         {
             tipstaffRecordID = tipstaffRecord.tipstaffRecordID;
             Path = string.Format(serverPath + "{0}", tipstaffRecord.tipstaffRecordID);
-            fileName = string.Format("{0}-{1}.doc", template.templateName, tipstaffRecord.UniqueRecordID);
+            fileName = string.Format("{0}-{1}.docx", template.templateName, tipstaffRecord.UniqueRecordID);
             fullName = string.Format("{0}\\{1}", Path, fileName);
             //Ensure folder exists to create outoput
             //if (!Directory.Exists(Path)) Directory.CreateDirectory(Path);

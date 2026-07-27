@@ -48,11 +48,17 @@
             @Html.ValidationMessageFor(model => model.Template.addresseerequired)
         </div>
         <div class="editor-label">
-            New template file in XML format
+            New template file in DOTX format
         </div>
         <div class="editor-field">
-            <input name="uploadFile" type="file" size="52" title="File upload"/>
+            <input name="uploadFile" type="file" size="52" title="File upload" accept=".dotx"/>
             <img width="20px" height="20px" id="loading_img" style="display:none;vertical-align:middle;" src="@Url.Content("~/Content/Images/al_arrows_green.gif")" alt="Processing..." />
+        </div>
+        <div class="editor-label">
+            <small style="color:gray;">
+                The template must be a Word Template (.dotx) file with a sensitivity 
+                label applied.
+            </small>
         </div>
         <p>            
             <input type="submit" 
