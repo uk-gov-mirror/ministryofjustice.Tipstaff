@@ -9,8 +9,8 @@ namespace Tipstaff.Migrations
     {
         public Configuration()
         {
-            AutomaticMigrationsEnabled = true;
-            AutomaticMigrationDataLossAllowed = true;
+            AutomaticMigrationsEnabled = false;
+            AutomaticMigrationDataLossAllowed = false;
             ContextKey = "Tipstaff.Models.TipstaffDB";
         }
 

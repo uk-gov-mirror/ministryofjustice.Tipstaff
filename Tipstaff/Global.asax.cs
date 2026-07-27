@@ -203,8 +203,9 @@ namespace Tipstaff
             RegisterGlobalFilters(GlobalFilters.Filters);
             RegisterRoutes(RouteTable.Routes);
 
-            // Disable the database initializer (no automatic migrations) for the base DbContext
+            // Disable EF initialization and automatic migrations for the concrete TipstaffDB context.
             Database.SetInitializer<DbContext>(null);
+            Database.SetInitializer<TipstaffDB>(null);
             ServiceLayer.UnitOfWorkHelper.CurrentDataStore = new HttpContextDataStore();
 
             string appYear = ConfigurationManager.AppSettings["AppYear"];
