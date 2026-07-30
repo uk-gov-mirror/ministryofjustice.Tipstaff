@@ -43,7 +43,7 @@ namespace Tipstaff.Controllers
                 }
                 //Get Template from templateID
                 Template template = db.Templates.Find(templateID);
-                if (template == null) throw new FileLoadException(string.Format("No database record found for template reference {0}",templateID));
+                ValidateTemplate(template, templateID);
 
                 //set fileOutput details
                 WordFile fileOutput = new WordFile(tipstaffRecord, Server.MapPath("~/Documents/"), template);
@@ -98,7 +98,7 @@ namespace Tipstaff.Controllers
 
                 //Get Template from templateID
                 Template template = db.Templates.Find(templateID);
-                if (template == null) throw new FileLoadException(string.Format("No database record found for template reference {0}",templateID));
+                ValidateTemplate(template, templateID);
 
                 //set fileOutput details
                 WordFile fileOutput = new WordFile(tipstaffRecord, Server.MapPath("~/Documents/"), template);
@@ -143,7 +143,7 @@ namespace Tipstaff.Controllers
 
                 //Get Template from templateID
                 Template template = db.Templates.Find(templateID);
-                if (template == null) throw new FileLoadException(string.Format("No database record found for template reference {0}", templateID));
+                ValidateTemplate(template, templateID);
 
                 //set fileOutput details
                 WordFile fileOutput = new WordFile(tipstaffRecord, Server.MapPath("~/Documents/"), template);
@@ -169,6 +169,24 @@ namespace Tipstaff.Controllers
                 TempData["ErrorModel"] = model;
                 return RedirectToAction("IndexByModel", "Error", model ?? null);
             }
+        }
+
+        private static void ValidateTemplate(Template template, int templateID)
+        {
+            if (template == null)
+                throw new FileLoadException(string.Format("No database record found for template reference {0}", templateID));
+            if (template.templateDOTX == null || template.templateDOTX.Length == 0)
+                throw new FileLoadException(string.Format("Template '{0}' (reference {1}) has no .dotx file uploaded", template.templateName, templateID));
+        }
+
+        // The original mergeData chain worked by successive string.Replace on the template
+        // XML, so the FIRST value written for a token was the one that reached the document —
+        // every later Replace for that same token found nothing left to match and did nothing.
+        // The dictionary is last-write-wins, so writes after the initial seed must not clobber.
+        private static void SetIfAbsent(Dictionary<string, string> placeholderFields, string key, string value)
+        {
+            if (!placeholderFields.ContainsKey(key))
+                placeholderFields[key] = value;
         }
 
         private Dictionary<string, string> BuildPlaceholderFields(Template template, TipstaffRecord tipstaffRecord, Solicitor solicitor, Applicant applicant)
@@ -242,7 +260,7 @@ namespace Tipstaff.Controllers
                             System.Diagnostics.Debug.Print(propValue.ToString());
                         }
                     }
-                    placeholderFields[string.Format("||{0}||", property.Name.ToUpper())] = propValue;
+                    SetIfAbsent(placeholderFields, string.Format("||{0}||", property.Name.ToUpper()), propValue);
                 }
 
                 placeholderFields["||MULTICHILD||"] = ca.children.Count() > 1 ? "children" : "child";
@@ -284,7 +302,7 @@ namespace Tipstaff.Controllers
                             System.Diagnostics.Debug.Print(propValue.ToString());
                         }
                     }
-                    placeholderFields[string.Format("||{0}||", property.Name.ToUpper())] = propValue;
+                    SetIfAbsent(placeholderFields, string.Format("||{0}||", property.Name.ToUpper()), propValue);
                 }
 
                 if (warrant.Respondents.Count() == 1)
@@ -312,27 +330,29 @@ namespace Tipstaff.Controllers
                                 System.Diagnostics.Debug.Print(propValue.ToString());
                             }
                         }
-                        placeholderFields[string.Format("||{0}||", property.Name.ToUpper())] = propValue;
+                        SetIfAbsent(placeholderFields, string.Format("||{0}||", property.Name.ToUpper()), propValue);
                     }
 
-                    placeholderFields["||GENDER.DETAIL||"]      = resp.gender?.detail ?? string.Empty;
-                    placeholderFields["||NATIONALITY.DETAIL||"] = resp.nationality?.Detail ?? string.Empty;
-                    placeholderFields["||COUNTRY.DETAIL||"]     = resp.country?.Detail ?? string.Empty;
-                    placeholderFields["||SKINCOLOUR.DETAIL||"]  = resp.SkinColour?.Detail ?? string.Empty;
-                    placeholderFields["||PNCID||"] = !string.IsNullOrEmpty(resp.PNCID) ? resp.PNCID : string.Empty;
+                    SetIfAbsent(placeholderFields, "||GENDER.DETAIL||",      resp.gender?.detail ?? string.Empty);
+                    SetIfAbsent(placeholderFields, "||NATIONALITY.DETAIL||", resp.nationality?.Detail ?? string.Empty);
+                    SetIfAbsent(placeholderFields, "||COUNTRY.DETAIL||",     resp.country?.Detail ?? string.Empty);
+                    SetIfAbsent(placeholderFields, "||SKINCOLOUR.DETAIL||",  resp.SkinColour?.Detail ?? string.Empty);
+                    SetIfAbsent(placeholderFields, "||PNCID||", !string.IsNullOrEmpty(resp.PNCID) ? resp.PNCID : string.Empty);
                 }
             }
 
             // ---------------------------------------------------------------
-            // Overloaded mergeData logic — overrides ||POSSIBLEADDRESSES|| and
-            // ||PNCIDS|| exactly as the original overloaded methods did
+            // Overloaded mergeData logic — these are fallbacks only. In the original
+            // they ran after the base mergeData had already consumed the tokens, so
+            // they only ever applied where the branches above left a token unset
+            // (e.g. a template with Discriminator "All"). SetIfAbsent preserves that.
             // ---------------------------------------------------------------
 
             if (tipstaffRecord.addresses != null)
             {
                 string addresses = string.Join("\n\n",
                     tipstaffRecord.addresses.Select(a => a.printAddressMultiLine));
-                placeholderFields["||POSSIBLEADDRESSES||"] = addresses != string.Empty ? addresses : string.Empty;
+                SetIfAbsent(placeholderFields, "||POSSIBLEADDRESSES||", addresses);
             }
 
             if (genericFunctions.TypeOfTipstaffRecord(tipstaffRecord) != "Warrant")
@@ -344,27 +364,27 @@ namespace Tipstaff.Controllers
                         .Where(c => !string.IsNullOrEmpty(c.PNCID))
                         .Select(c => c.PNCID)
                         .ToList();
-                    placeholderFields["||PNCIDS||"] = string.Join("\n", childPncids);
+                    SetIfAbsent(placeholderFields, "||PNCIDS||", string.Join("\n", childPncids));
                 }
             }
 
             // Addressee and address — solicitor precedence then applicant
             if (solicitor == null && applicant == null)
             {
-                placeholderFields["||ADDRESSEENAME||"] = string.Empty;
-                placeholderFields["||ADDRESS||"]       = "Add Address here";
+                SetIfAbsent(placeholderFields, "||ADDRESSEENAME||", string.Empty);
+                SetIfAbsent(placeholderFields, "||ADDRESS||", "Add Address here");
             }
             else if (solicitor != null)
             {
-                placeholderFields["||ADDRESSEENAME||"] = solicitor.AddresseeName ?? string.Empty;
-                placeholderFields["||ADDRESS||"] = solicitor.SolicitorFirm != null
+                SetIfAbsent(placeholderFields, "||ADDRESSEENAME||", solicitor.AddresseeName ?? string.Empty);
+                SetIfAbsent(placeholderFields, "||ADDRESS||", solicitor.SolicitorFirm != null
                     ? solicitor.SolicitorFirm.printAddressMultiLine
-                    : string.Empty;
+                    : string.Empty);
             }
             else
             {
-                placeholderFields["||ADDRESSEENAME||"] = applicant.fullname ?? string.Empty;
-                placeholderFields["||ADDRESS||"]       = applicant.printAddressMultiLine ?? string.Empty;
+                SetIfAbsent(placeholderFields, "||ADDRESSEENAME||", applicant.fullname ?? string.Empty);
+                SetIfAbsent(placeholderFields, "||ADDRESS||", applicant.printAddressMultiLine ?? string.Empty);
             }
 
             return placeholderFields;
